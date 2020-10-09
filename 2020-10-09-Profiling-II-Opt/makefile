@@ -16,11 +16,11 @@ gprof: example.cpp
 
 callgrind: example.x example.cpp
 	valgrind --tool=callgrind ./$< 5000 5000
-	callgrind_annotate $$(ls -t callgrind* | head -n 1) > callgrind-report.txt
+	callgrind_annotate $$(ls -t callgrind.out.* | head -n 1) > callgrind-report.txt
 
 cachegrind: example.x example.cpp
 	valgrind --tool=cachegrind ./$< 5000 5000
-	cg_annotate $$(ls -t cachegrind* | head -n 1) > cachegrind-report.txt
+	cg_annotate $$(ls -t cachegrind.out.* | head -n 1) > cachegrind-report.txt
 
 clean :
 	rm -f *.x a.out
