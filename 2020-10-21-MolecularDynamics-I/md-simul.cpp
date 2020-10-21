@@ -23,10 +23,16 @@ void compute_force(Particle & body)
   double delta = body.rad - body.Ry;
   if (delta > 0) {
     body.Fy += K*delta;
-    body.Fy -= 1.9876*body.Vy;
+    body.Fy -= 0.2*body.Vy;
   }
 
   // force with right wall
+  double LX = 2.01;
+  delta = body.Rx + body.rad - LX;
+  if (delta > 0) {
+    body.Fx -= K*delta;
+    body.Fx -= 0.2*body.Vx;
+  }
 
 }
 
