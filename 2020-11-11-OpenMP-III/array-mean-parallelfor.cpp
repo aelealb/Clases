@@ -37,34 +37,18 @@ int main(int argc, char **argv)
 
 void fill(double * d, int n, int nthreads)
 {
-#pragma omp parallel num_threads (nthreads)
-  {
-    int nth = omp_get_num_threads();
-    int tid = omp_get_thread_num();
-    int SL = n/nth;
-    
-    for (int ii = tid*SL; ii < tid*SL + SL; ++ii) {
+#pragma omp parallel for num_threads (nthreads)
+  for (int ii = 0; ii < n; ++ii) {
       d[ii] = 2*std::sin(ii) + std::log(ii + 1);
     }
-  }
 }
 
 double average(double * d, int n, int nthreads)
 {
   double sum = 0.0;
-  double sumlocal[nthreads] = {0.0};
-#pragma omp parallel num_threads (nthreads)
-  {
-    int nth = omp_get_num_threads();
-    int tid = omp_get_thread_num();
-    int SL = n/nth;
-    
-    for (int ii = tid*SL; ii < tid*SL + SL; ++ii) {
-      sumlocal[tid] += d[ii]; 
-    }
-  }
-  for (auto val : sumlocal) {
-    sum += val;
+#pragma omp parallel for num_threads (nthreads) reduction(+:sum)
+  for (int ii = 0; ii < n; ++ii) {
+    sum += d[ii]; 
   }
   return sum/n;
 }

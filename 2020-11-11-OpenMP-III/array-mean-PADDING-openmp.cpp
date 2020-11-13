@@ -52,7 +52,8 @@ void fill(double * d, int n, int nthreads)
 double average(double * d, int n, int nthreads)
 {
   double sum = 0.0;
-  double sumlocal[nthreads] = {0.0};
+  int PAD = 100000;
+  double sumlocal[nthreads*PAD] = {0.0};
 #pragma omp parallel num_threads (nthreads)
   {
     int nth = omp_get_num_threads();
@@ -60,11 +61,11 @@ double average(double * d, int n, int nthreads)
     int SL = n/nth;
     
     for (int ii = tid*SL; ii < tid*SL + SL; ++ii) {
-      sumlocal[tid] += d[ii]; 
+      sumlocal[tid*PAD] += d[ii]; 
     }
   }
-  for (auto val : sumlocal) {
-    sum += val;
+  for (int ii = 0; ii < tid; ++ii)
+    sum += sumlocal[ii*PAD];
   }
   return sum/n;
 }
