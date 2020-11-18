@@ -1,7 +1,7 @@
 #include <iostream>
 #include "mpi.h"
 
-const int NS = 10;
+const int NS = 100;
 
 void fill(double *data, int ns, int nslocal, int pid, int nproc);
 void print(double *data, int ns, int nslocal, int pid, int nproc);
@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 void fill(double *data, int ns, int nslocal, int pid, int nproc)
 {
   for (int ilocal = 0; ilocal < nslocal; ++ilocal) {
-    data[ilocal] = 2*ilocal;
+    data[ilocal] = 2*(pid*nslocal + ilocal);
   }
 }
 
