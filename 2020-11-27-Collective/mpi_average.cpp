@@ -34,13 +34,24 @@ int main(int argc, char **argv)
   if (0 == pid) {
     std::cout << end-start << "\n";
   }
-  
+  ///*  
   start = MPI_Wtime();
   average(data, NS, NSlocal, pid, nproc);
   end = MPI_Wtime();
   if (0 == pid) {
     std::cout << end-start << "\n";
   }
+  //*/
+
+  /*
+  start = MPI_Wtime();
+  average_collective(data, NS, NSlocal, pid, nproc);
+  end = MPI_Wtime();
+  if (0 == pid) {
+    std::cout << end-start << "\n";
+  }
+  */
+
   // parallel print
   //print(data, NS, NSlocal, pid, nproc);
   
@@ -52,7 +63,8 @@ int main(int argc, char **argv)
 void fill(double *data, int ns, int nslocal, int pid, int nproc)
 {
   for (int ilocal = 0; ilocal < nslocal; ++ilocal) {
-    data[ilocal] = 2*(pid*nslocal + ilocal);
+    //data[ilocal] = 2*(pid*nslocal + ilocal);
+    data[ilocal] = 1.03765432;
   }
 }
 
@@ -107,15 +119,10 @@ void average_collective(double *data, int ns, int nslocal, int pid, int nproc)
   double sum = 0.0;
   sum = std::accumulate(data, data+nslocal, 0.0);
 
+  double aux = 0;
+  MPI_Reduce(&sum, &aux, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  
   if (0 == pid) {
-    double aux;
-    for (int src = 1; src < nproc; ++src) {
-      MPI_Recv(&aux, 1, MPI_DOUBLE, src, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      sum += aux;
-    }
-    std::cout << "Avg: " << sum/ns << "\n";
-  } else {
-    int dest = 0;
-    MPI_Send(&sum, 1, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
+    std::cout << "Avg: " << aux/ns << "\n";
   }
 }
