@@ -1,17 +1,23 @@
 #include <iostream>
 #include <vector>
+#include <mpi.h>
 
-const double DELTA = 0.05;
+const double DELTA = 0.1;
 const double XMIN = 0.0;
 const double XMAX = 1.0;
 const double YMIN = 0.0;
 const double YMAX = 1.2;
 const int NX = (XMAX-XMIN)/DELTA;
 const int NY = (YMAX-YMIN)/DELTA;
-const int NSTEPS = 100;
+const int NSTEPS = 0;
 
 typedef std::vector<double> data_t;
 
+// parallel functions
+void initial_conditions(data_t & data, int nx, int ny, int pid, int np);
+void print_screen(const data_t & data, int nx, int ny, int pid, int nproc);
+
+// serial functions
 void initial_conditions(data_t & data, int nx, int ny);
 void boundary_conditions(data_t & data, int nx, int ny);
 void evolve(data_t & data, int nx, int ny, int nsteps);
@@ -23,15 +29,26 @@ void print_gnuplot(const data_t & data, int nx, int ny);
 
 int main(int argc, char **argv)
 {
+    int pid = 0, nproc = 0;
+    // init mpi environment
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+
     // declare data structures
-    data_t potential(NX*NY); // [ii, jj] -> ii*NY + jj
+    int NXlocal = NX/nproc; // TODO: Faltan los ghosts
+    data_t potential(NXlocal*NY); // [ii, jj] -> ii*NY + jj
 
     // set initial and boundary conditions
-    initial_conditions(potential, NX, NY);
-    boundary_conditions(potential, NX, NY);
+    initial_conditions(potential, NXlocal, NY, pid, nproc);
+    print_screen(potential, NXlocal, NY, pid, nproc);
+    //boundary_conditions(potential, NX, NY);
 
     // evolve and print
-    evolve(potential, NX, NY, NSTEPS);
+    //evolve(potential, NX, NY, NSTEPS);
+
+    // close mpi environment
+    MPI_Finalize();
 
     return 0;
 }
@@ -44,6 +61,15 @@ void initial_conditions(data_t & data, int nx, int ny)
         }
     }
 }
+void initial_conditions(data_t & data, int nx, int ny, int pid, int np)
+{
+    for(int ix = 0; ix < nx; ++ix) {
+        for(int iy = 0; iy < ny; ++iy) {
+            data[ix*ny + iy] = pid;
+        }
+    }
+}
+
 void boundary_conditions(data_t & data, int nx, int ny)
 {
     int ix, iy;
@@ -76,11 +102,12 @@ void boundary_conditions(data_t & data, int nx, int ny)
 
 void evolve(data_t & data, int nx, int ny, int nsteps)
 {
-    start_gnuplot();
+    //start_gnuplot();
+    print_screen(data, nx, ny);
     for(int istep = 0; istep < nsteps; ++istep) {
         relaxation_step(data, nx, ny);
-        //print_screen(data, nx, ny);
-        print_gnuplot(data, nx, ny);
+        print_screen(data, nx, ny);
+        //print_gnuplot(data, nx, ny);
     }
 }
 void relaxation_step(data_t & data, int nx, int ny)
@@ -98,6 +125,7 @@ void relaxation_step(data_t & data, int nx, int ny)
     }
 
 }
+
 void print_screen(const data_t & data, int nx, int ny)
 {
     for(int ix = 0; ix < nx; ++ix) {
@@ -107,6 +135,22 @@ void print_screen(const data_t & data, int nx, int ny)
         std::cout << "\n";
     }
     std::cout << "\n";
+}
+
+void print_screen(const data_t & data, int nx, int ny, int pid, int np)
+{
+    int tag = 0;
+    if (0 == pid) {
+        print_screen(data, nx, ny);
+        std::vector<double> buffer(nx*ny);
+        for (int src = 1; src < np; ++src) {
+            MPI_Recv(&buffer[0], nx*ny, MPI_DOUBLE, src, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            print_screen(buffer, nx, ny);
+        }
+    } else {
+        int dest = 0;
+        MPI_Send(&data[0], nx*ny, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
+    }
 }
 
 void start_gnuplot(void)
